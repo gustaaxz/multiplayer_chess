@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xadrez Premium - O Meu Jogo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        h1, h2, h3, .chess-font {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .square {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        @media (min-width: 768px) {
+            .square { font-size: 3.5rem; }
+        }
+
+        .light-square { background-color: #f0d9b5; }
+        .dark-square { background-color: #b58863; }
+        
+        .highlight-selected { background-color: #a9a924 !important; }
+        .highlight-move { position: relative; }
+        .highlight-move::after {
+            content: '';
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+        }
+        
+        .piece-w {
+            color: white;
+            text-shadow: 0px 2px 4px rgba(0,0,0,0.6);
+        }
+        .piece-b {
+            color: black;
+            text-shadow: 0px 2px 2px rgba(255,255,255,0.4);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="min-h-screen text-gray-800 flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-gray-900 text-white p-4 shadow-md">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <span class="text-3xl">♞</span> Xadrez Real
+            </h1>
+            <div id="userStatus" class="text-sm text-gray-400">A conectar ao servidor...</div>
+        </div>
+    </nav>
+
+    <main class="flex-grow flex items-center justify-center p-4 max-w-4xl mx-auto w-full">
+        
+        <!-- Loading Screen -->
+        <div id="loadingView" class="text-center">
+            <div class="animate-spin text-4xl mb-4">⏳</div>
+            <p class="text-lg text-gray-600">A inicializar sistema...</p>
+        </div>
+
+        <!-- Menu Principal -->
+        <div id="menuView" class="hidden glass-panel p-8 rounded-2xl w-full max-w-md text-center">
+            <h2 class="text-3xl font-bold mb-6 text-gray-800">Escolha um Modo</h2>
+            
+            <div class="space-y-4">
+                <button onclick="startGame('local')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 flex items-center justify-center gap-3">
+                    <span class="text-2xl">🤝</span> Jogar Local (2 Jogadores)
+                </button>
+                <button onclick="startGame('ai')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 flex items-center justify-center gap-3">
+                    <span class="text-2xl">🤖</span> Jogar vs Computador
+                </button>
+                <button onclick="openLobby()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 flex items-center justify-center gap-3">
+                    <span class="text-2xl">🌍</span> Multiplayer Online
+                </button>
+            </div>
+        </div>
+
+        <!-- Lobby Multiplayer -->
+        <div id="lobbyView" class="hidden glass-panel p-6 rounded-2xl w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Salas Online</h2>
+                <button onclick="showMenu()" class="text-gray-500 hover:text-gray-800">Voltar</button>
+            </div>
+            
+            <button onclick="createOnlineMatch()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 mb-6">
+                + Criar Nova Sala
+            </button>
+
+            <div class="bg-gray-50 rounded-xl p-4 min-h-[200px] max-h-[400px] overflow-y-auto">
+                <p id="noRoomsMsg" class="text-gray-500 text-center py-8">Nenhuma sala aberta no momento.</p>
+                <div id="roomList" class="space-y-2">
+                    <!-- Salas serão injetadas aqui -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Ecrã de Espera -->
+        <div id="waitingView" class="hidden glass-panel p-8 rounded-2xl w-full max-w-md text-center">
+            <div class="animate-pulse text-6xl mb-4">👑</div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Sala Criada!</h2>
+            <p class="text-gray-600 mb-6">A aguardar que um oponente entre na sala...</p>
+            <p class="text-sm font-mono bg-gray-100 p-2 rounded mb-6">ID: <span id="roomIdDisplay" class="font-bold"></span></p>
+            <button onclick="cancelMatch()" class="text-red-500 hover:text-red-700 font-semibold">Cancelar Sala</button>
+        </div>
+
+        <!-- Ecrã do Jogo -->
+        <div id="gameView" class="hidden w-full max-w-3xl flex flex-col items-center">
+            
+            <div class="w-full flex justify-between items-center mb-4 px-2">
+                <div id="gameStatus" class="font-semibold text-lg text-gray-800 bg-white px-4 py-2 rounded-lg shadow-sm">
+                    Status do Jogo
+                </div>
+                <button onclick="leaveGame()" class="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg font-medium transition">
+                    Sair da Partida
+                </button>
+            </div>
+
+            <!-- O Tabuleiro -->
+            <div id="boardContainer" class="w-full max-w-[500px] aspect-square rounded-sm overflow-hidden shadow-2xl border-4 border-gray-800">
+                <div id="board" class="w-full h-full grid grid-cols-8 grid-rows-8">
+                    <!-- Quadrados gerados via JS -->
+                </div>
+            </div>
+
+            <div id="messages" class="mt-6 text-center text-red-500 font-bold h-6"></div>
+        </div>
+
+    </main>
+
+    <!-- Modal Auxiliar -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl max-w-sm w-full text-center shadow-2xl transform scale-100 transition-all">
+            <h3 id="modalTitle" class="text-2xl font-bold mb-2">Título</h3>
+            <p id="modalDesc" class="text-gray-600 mb-6">Descrição</p>
+            <button onclick="closeModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700">OK</button>
+        </div>
+    </div>
+
+    <!-- Firebase e Lógica Principal -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // =========================================================================
+        // CONFIGURAÇÃO INTELIGENTE DO FIREBASE
+        // =========================================================================
+        let firebaseConfig;
+        let myAppId;
+
+        // Se estiver na janela de visualização (Preview), usa a configuração de ambiente para não dar erro
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+            myAppId = typeof __app_id !== 'undefined' ? __app_id : 'meu-xadrez-online-v1';
+        } else {
+            // Se o jogo for aberto pelo seu ficheiro HTML num site externo, usa as SUAS chaves.
+            // NOTA: Se o erro "api-key-not-valid" acontecer quando abrir o ficheiro externamente, 
+            // apague a apiKey abaixo e copie-a de novo diretamente do seu painel Firebase.
+            firebaseConfig = {
+                apiKey: "AIzaSyBmqOPEupWyIWEebpFGOiGH9qNQcC21EE4",
+                authDomain: "xadrez-multiplayer.firebaseapp.com",
+                projectId: "xadrez-multiplayer",
+                storageBucket: "xadrez-multiplayer.firebasestorage.app",
+                messagingSenderId: "139686022769",
+                appId: "1:139686022769:web:a9dc4be4221593fdef15d0",
+                measurementId: "G-XYC1RB7CJL"
+            };
+            myAppId = 'meu-xadrez-online-v1'; 
+        }
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        let currentUser = null;
+        let onlineLobbyUnsubscribe = null;
+        let activeMatchUnsubscribe = null;
+
+        // ==========================================
+        // Variáveis de Estado do Jogo
+        // ==========================================
+        let game = new Chess();
+        let currentMode = 'local';
+        let myColor = 'w';
+        let currentMatchId = null;
+        let selectedSquare = null;
+        let possibleMoves = [];
+
+        const PIECES = {
+            'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
+        };
+
+        // ==========================================
+        // Inicialização e Autenticação
+        // ==========================================
+        const initAuth = async () => {
+            try {
+                // Tenta autenticação nativa (necessário para Preview) ou cai de volta no anónimo
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Erro de Autenticação:", error);
+                document.getElementById('userStatus').innerText = "Erro ao conectar.";
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('userStatus').innerText = "Jogador Online ID: " + user.uid.substring(0,5);
+                showView('menuView');
+            }
+        });
+
+        initAuth();
+
+        // ==========================================
+        // Gerenciamento de Interface
+        // ==========================================
+        function showView(viewId) {
+            ['loadingView', 'menuView', 'lobbyView', 'waitingView', 'gameView'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        function showModal(title, desc) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerText = desc;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        window.closeModal = () => {
+            document.getElementById('modal').classList.add('hidden');
+        };
+
+        window.showMenu = () => {
+            if (onlineLobbyUnsubscribe) onlineLobbyUnsubscribe();
+            showView('menuView');
+        };
+
+        // ==========================================
+        // Lógica do Tabuleiro (Renderização)
+        // ==========================================
+        function createBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = '';
+            
+            const rows = myColor === 'w' ? [8,7,6,5,4,3,2,1] : [1,2,3,4,5,6,7,8];
+            const cols = myColor === 'w' ? ['a','b','c','d','e','f','g','h'] : ['h','g','f','e','d','c','b','a'];
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const squareId = cols[c] + rows[r];
+                    const isDark = (r + c) % 2 !== 0;
+                    
+                    const squareEl = document.createElement('div');
+                    squareEl.className = `square ${isDark ? 'dark-square' : 'light-square'}`;
+                    squareEl.id = squareId;
+                    squareEl.dataset.square = squareId;
+                    
+                    squareEl.addEventListener('click', () => handleSquareClick(squareId));
+                    boardDiv.appendChild(squareEl);
+                }
+            }
+            updateBoardState();
+        }
+
+        function updateBoardState() {
+            const board = game.board();
+            
+            document.querySelectorAll('.square').forEach(sq => {
+                sq.innerHTML = '';
+                sq.classList.remove('highlight-selected', 'highlight-move');
+            });
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const piece = board[r][c];
+                    if (piece) {
+                        const col = String.fromCharCode(97 + c);
+                        const row = 8 - r;
+                        const squareId = col + row;
+                        const squareEl = document.getElementById(squareId);
+                        
+                        if (squareEl) {
+                            const pieceSpan = document.createElement('span');
+                            pieceSpan.innerText = PIECES[piece.type];
+                            pieceSpan.className = piece.color === 'w' ? 'piece-w' : 'piece-b';
+                            squareEl.appendChild(pieceSpan);
+                        }
+                    }
+                }
+            }
+
+            if (selectedSquare) {
+                document.getElementById(selectedSquare)?.classList.add('highlight-selected');
+                possibleMoves.forEach(move => {
+                    document.getElementById(move.to)?.classList.add('highlight-move');
+                });
+            }
+
+            updateStatusText();
+        }
+
+        function updateStatusText() {
+            const statusEl = document.getElementById('gameStatus');
+            let status = '';
+            let moveColor = game.turn() === 'w' ? 'Brancas' : 'Pretas';
+
+            if (game.in_checkmate()) {
+                status = `Xeque-mate! ${moveColor === 'Brancas' ? 'Pretas' : 'Brancas'} vencem.`;
+                showModal("Fim de Jogo", status);
+            } else if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
+                status = 'Empate!';
+                showModal("Fim de Jogo", status);
+            } else {
+                status = `Turno das ${moveColor}`;
+                if (game.in_check()) status += ' (Xeque!)';
+            }
+
+            if (currentMode === 'online') {
+                const minhaCorStr = myColor === 'w' ? 'Brancas' : 'Pretas';
+                status = `Você: ${minhaCorStr} | ${status}`;
+            }
+
+            statusEl.innerText = status;
+        }
+
+        // ==========================================
+        // Interação com o Tabuleiro
+        // ==========================================
+        function handleSquareClick(squareId) {
+            if (game.game_over()) return;
+            if (currentMode === 'online' && game.turn() !== myColor) return;
+            if (currentMode === 'ai' && game.turn() === 'b') return;
+
+            const pieceAtSquare = game.get(squareId);
+
+            if (!selectedSquare) {
+                if (pieceAtSquare && pieceAtSquare.color === game.turn()) {
+                    selectedSquare = squareId;
+                    possibleMoves = game.moves({ square: squareId, verbose: true });
+                    updateBoardState();
+                }
+                return;
+            }
+
+            const moveOptions = { from: selectedSquare, to: squareId, promotion: 'q' };
+            const isMoveValid = possibleMoves.find(m => m.to === squareId);
+
+            if (isMoveValid) {
+                game.move(moveOptions);
+                selectedSquare = null;
+                possibleMoves = [];
+                updateBoardState();
+                handlePostMove();
+            } else {
+                if (pieceAtSquare && pieceAtSquare.color === game.turn()) {
+                    selectedSquare = squareId;
+                    possibleMoves = game.moves({ square: squareId, verbose: true });
+                } else {
+                    selectedSquare = null;
+                    possibleMoves = [];
+                }
+                updateBoardState();
+            }
+        }
+
+        function handlePostMove() {
+            if (currentMode === 'online') {
+                syncMoveToFirebase();
+            } else if (currentMode === 'ai' && !game.game_over()) {
+                setTimeout(makeAIMove, 500);
+            }
+        }
+
+        function makeAIMove() {
+            if (game.game_over()) return;
+            const moves = game.moves({ verbose: true });
+            let move;
+            const captures = moves.filter(m => m.flags.includes('c'));
+            if (captures.length > 0) {
+                move = captures[Math.floor(Math.random() * captures.length)];
+            } else {
+                move = moves[Math.floor(Math.random() * moves.length)];
+            }
+            game.move(move);
+            updateBoardState();
+        }
+
+        // ==========================================
+        // Inicialização de Partidas (Local / AI)
+        // ==========================================
+        window.startGame = (mode) => {
+            currentMode = mode;
+            myColor = 'w'; 
+            game.reset();
+            selectedSquare = null;
+            possibleMoves = [];
+            createBoard();
+            showView('gameView');
+        };
+
+        // ==========================================
+        // Lógica Multiplayer (Firebase)
+        // ==========================================
+        const getMatchesCollection = () => collection(db, 'artifacts', myAppId, 'public', 'data', 'chess_matches');
+
+        window.openLobby = async () => {
+            if (!currentUser) return;
+            showView('lobbyView');
+            
+            onlineLobbyUnsubscribe = onSnapshot(getMatchesCollection(), (snapshot) => {
+                const roomListEl = document.getElementById('roomList');
+                const noRoomsMsg = document.getElementById('noRoomsMsg');
+                roomListEl.innerHTML = '';
+                let hasRooms = false;
+
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.status === 'waiting' && data.host !== currentUser.uid) {
+                        hasRooms = true;
+                        const btn = document.createElement('div');
+                        btn.className = 'bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-center';
+                        btn.innerHTML = `
+                            <div>
+                                <span class="font-bold text-gray-800">Sala de:</span> <span class="text-sm font-mono text-gray-600">${data.host.substring(0,5)}</span>
+                            </div>
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition" onclick="joinOnlineMatch('${docSnap.id}')">Entrar</button>
+                        `;
+                        roomListEl.appendChild(btn);
+                    }
+                });
+
+                if (hasRooms) noRoomsMsg.classList.add('hidden');
+                else noRoomsMsg.classList.remove('hidden');
+            }, (error) => console.error("Erro ao buscar salas:", error));
+        };
+
+        window.createOnlineMatch = async () => {
+            if (!currentUser) return;
+            if (onlineLobbyUnsubscribe) onlineLobbyUnsubscribe();
+
+            currentMatchId = Date.now().toString() + Math.floor(Math.random() * 1000);
+            const matchRef = doc(db, 'artifacts', myAppId, 'public', 'data', 'chess_matches', currentMatchId);
+            game.reset(); 
+            
+            try {
+                await setDoc(matchRef, {
+                    host: currentUser.uid,
+                    client: null,
+                    status: 'waiting',
+                    fen: game.fen(),
+                    createdAt: Date.now()
+                });
+
+                document.getElementById('roomIdDisplay').innerText = currentMatchId.substring(0,8);
+                showView('waitingView');
+
+                activeMatchUnsubscribe = onSnapshot(matchRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (data.status === 'playing' && data.client !== null) {
+                            myColor = 'w';
+                            currentMode = 'online';
+                            createBoard();
+                            showView('gameView');
+                        } else if (data.status === 'abandoned') {
+                            showModal("Aviso", "O adversário saiu da partida.");
+                            leaveGameLocally();
+                        } else if (data.status === 'playing') {
+                            if (data.fen !== game.fen()) {
+                                game.load(data.fen);
+                                updateBoardState();
+                            }
+                        }
+                    }
+                }, (err) => console.error(err));
+            } catch (err) {
+                console.error("Erro ao criar sala:", err);
+                showModal("Erro", "Não foi possível criar a sala. Verifique a configuração do Firebase.");
+                showMenu();
+            }
+        };
+
+        window.joinOnlineMatch = async (matchId) => {
+            if (!currentUser) return;
+            if (onlineLobbyUnsubscribe) onlineLobbyUnsubscribe();
+
+            const matchRef = doc(db, 'artifacts', myAppId, 'public', 'data', 'chess_matches', matchId);
+            try {
+                await updateDoc(matchRef, {
+                    client: currentUser.uid,
+                    status: 'playing'
+                });
+
+                currentMatchId = matchId;
+                myColor = 'b';
+                currentMode = 'online';
+                game.reset();
+                createBoard();
+                showView('gameView');
+
+                activeMatchUnsubscribe = onSnapshot(matchRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (data.status === 'abandoned') {
+                            showModal("Vitória", "O adversário abandonou a partida.");
+                            leaveGameLocally();
+                        } else if (data.fen !== game.fen()) {
+                            game.load(data.fen);
+                            updateBoardState();
+                        }
+                    }
+                }, (err) => console.error(err));
+            } catch (err) {
+                console.error("Erro ao entrar:", err);
+                showModal("Erro", "A sala pode estar cheia ou não existir mais.");
+                openLobby();
+            }
+        };
+
+        window.cancelMatch = async () => {
+            if (currentMatchId && activeMatchUnsubscribe) {
+                activeMatchUnsubscribe();
+                const matchRef = doc(db, 'artifacts', myAppId, 'public', 'data', 'chess_matches', currentMatchId);
+                await deleteDoc(matchRef);
+                currentMatchId = null;
+            }
+            openLobby();
+        };
+
+        async function syncMoveToFirebase() {
+            if (!currentMatchId) return;
+            const matchRef = doc(db, 'artifacts', myAppId, 'public', 'data', 'chess_matches', currentMatchId);
+            try {
+                await updateDoc(matchRef, { fen: game.fen() });
+            } catch (err) {
+                console.error("Erro ao sincronizar jogada", err);
+            }
+        }
+
+        window.leaveGame = async () => {
+            if (currentMode === 'online' && currentMatchId) {
+                const matchRef = doc(db, 'artifacts', myAppId, 'public', 'data', 'chess_matches', currentMatchId);
+                try {
+                    await updateDoc(matchRef, { status: 'abandoned' });
+                } catch(e) {}
+            }
+            leaveGameLocally();
+        };
+
+        function leaveGameLocally() {
+            if (activeMatchUnsubscribe) activeMatchUnsubscribe();
+            currentMatchId = null;
+            showMenu();
+        }
+
+    </script>
+</body>
+</html>
