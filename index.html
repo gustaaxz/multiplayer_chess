@@ -506,16 +506,24 @@
                 activeMatchUnsubscribe = onSnapshot(matchRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        if (data.status === 'playing' && data.client !== null) {
-                            myColor = 'w';
-                            currentMode = 'online';
-                            createBoard();
-                            showView('gameView');
-                        } else if (data.status === 'abandoned') {
+                        
+                        if (data.status === 'abandoned') {
                             showModal("Aviso", "O adversário saiu da partida.");
                             leaveGameLocally();
-                        } else if (data.status === 'playing') {
-                            if (data.fen !== game.fen()) {
+                            return; // Para a execução aqui se o jogo foi abandonado
+                        }
+                        
+                        if (data.status === 'playing' && data.client !== null) {
+                            // 1. Verificar se o ecrã do jogo ainda está escondido (significa que o amigo acabou de entrar)
+                            if (document.getElementById('gameView').classList.contains('hidden')) {
+                                myColor = 'w';
+                                currentMode = 'online';
+                                createBoard();
+                                showView('gameView');
+                            }
+                            
+                            // 2. Atualizar as jogadas recebidas do Firebase
+                            if (data.fen && data.fen !== game.fen()) {
                                 game.load(data.fen);
                                 updateBoardState();
                             }
