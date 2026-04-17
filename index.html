@@ -79,7 +79,7 @@
     <main class="flex-grow flex items-center justify-center p-4 max-w-4xl mx-auto w-full">
         
         <!-- Loading Screen -->
-        <div id="loadingView" class="text-center">
+        <div id="loadingView" class="text-center w-full max-w-md">
             <div class="animate-spin text-4xl mb-4">⏳</div>
             <p class="text-lg text-gray-600">A inicializar sistema...</p>
         </div>
@@ -230,6 +230,23 @@
             } catch (error) {
                 console.error("Erro de Autenticação:", error);
                 document.getElementById('userStatus').innerText = "Erro ao conectar.";
+                
+                // Mostrar o erro exato no ecrã para ajudar a resolver o problema
+                document.getElementById('loadingView').innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-xl border border-red-200">
+                        <div class="text-red-500 text-5xl mb-4">❌</div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-2">Erro de Ligação ao Firebase</h2>
+                        <div class="bg-gray-100 p-3 rounded text-left text-sm font-mono text-red-600 overflow-x-auto mb-4">
+                            ${error.message}
+                        </div>
+                        <p class="text-sm text-gray-600 text-left">
+                            <strong>Possíveis causas:</strong><br>
+                            1. O método de Início de Sessão <b>Anónimo</b> não está ativado na secção Authentication do Firebase.<br>
+                            2. A chave da API está incorreta.<br>
+                            3. O Firebase está a bloquear a abertura de ficheiros locais (file:///). Hospede o ficheiro num site como o Tiiny.host.
+                        </p>
+                    </div>
+                `;
             }
         };
 
