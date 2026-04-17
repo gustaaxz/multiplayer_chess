@@ -1,106 +1,68 @@
-♞ Documentação Completa: Xadrez Premium
+# ♞ Xadrez Premium Online
 
-Bem-vindo ao Xadrez Premium! Este documento explica tudo o que você precisa saber para começar a jogar rapidamente, entender a interface e aproveitar os modos de jogo (inclusive o Multiplayer Online).
+![Firebase](https://img.shields.io/badge/firebase-%23039BE5.svg?style=for-the-badge&logo=firebase&logoColor=white)
+![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
+![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-🎮 Modos de Jogo
+Bem-vindo ao **Xadrez Multiplayer**! Um simulador de xadrez moderno e responsivo, focado em oferecer uma experiência competitiva de alta qualidade diretamente no navegador, com suporte a partidas locais, contra IA e multiplayer em tempo real.
 
-O sistema oferece três maneiras distintas de jogar, que você pode escolher no menu principal:
+---
 
-1. 🤝 Jogar Local (2 Jogadores)
+## 🎮 Modos de Jogo
 
-Como funciona: Ideal para jogar com alguém que está do seu lado, utilizando a mesma tela.
-Como jogar:
+O sistema oferece três maneiras distintas de jogar, selecionáveis no menu principal:
 
-Clique no botão "Jogar Local".
+### 1. 🤝 Jogar Local (2 Jogadores)
+Ideal para jogar com alguém fisicamente ao seu lado, utilizando a mesma tela.
+* **Dinâmica:** As Brancas ficam na parte inferior. Após cada jogada, o turno alterna manualmente.
+* **Regras:** O sistema valida todos os movimentos, impedindo jogadas ilegais.
 
-O tabuleiro será carregado com as peças brancas na parte inferior.
+### 2. 🤖 Jogar vs Computador (IA)
+Desafie uma Inteligência Artificial básica embutida.
+* **Dinâmica:** Você assume as Brancas. Após o seu movimento, a IA processa e executa a resposta das Pretas automaticamente em meio segundo.
 
-Você (Brancas) faz o seu movimento. Em seguida, o seu amigo (Pretas) faz o movimento dele usando o mesmo mouse/tela.
+### 3. 🌍 Multiplayer Online
+Jogue contra qualquer pessoa através da internet com salvamento em nuvem via Firebase.
+* **Criar Sala:** O criador joga sempre de **Brancas**.
+* **Entrar em Sala:** O oponente joga de **Pretas** e o tabuleiro gira automaticamente para sua perspectiva.
+* **Sincronização:** Movimentos atualizados em tempo real para ambos os jogadores.
 
-O sistema não deixará você fazer movimentos ilegais.
+---
 
-2. 🤖 Jogar vs Computador
+## 🕹️ Controles e Interface
 
-Como funciona: Você joga sozinho contra uma Inteligência Artificial básica embutida no jogo.
-Como jogar:
+### Como Mover as Peças
+A interação é feita por cliques simples, otimizada para Desktop e Mobile:
+1.  **Selecionar:** Clique na peça desejada. O fundo ficará verde-oliva.
+2.  **Visualizar:** Círculos translúcidos indicam casas para onde a peça pode ir.
+3.  **Mover:** Clique na casa marcada ou na peça adversária para capturar.
 
-Clique no botão "Jogar vs Computador".
+### Painel de Status
+Localizado acima do tabuleiro, informa:
+* Vez do jogador (**Turno das Brancas/Pretas**).
+* Alertas de **Xeque!** ou **Xeque-mate**.
+* No modo online, confirma sua cor de atribuição.
 
-Você jogará com as peças Brancas.
+---
 
-Faça a sua jogada normalmente. Após o seu movimento, aguarde meio segundo e o computador fará a jogada dele automaticamente (as Pretas).
+## 🚀 Guia Técnico e Instalação
 
-3. 🌍 Multiplayer Online
+### Requisitos
+* Navegador moderno (Chrome, Edge, Firefox ou Safari).
+* Conexão com internet (apenas para o modo Multiplayer).
 
-Como funciona: Jogue contra amigos (ou desconhecidos) em diferentes computadores/celulares conectados à internet, utilizando salvamento em nuvem em tempo real.
-Como jogar:
+### Configuração do Firebase
+Para habilitar o Multiplayer em seu próprio repositório:
+1.  Crie um projeto no [Firebase Console](https://console.firebase.google.com/).
+2.  Ative o **Cloud Firestore** e o **Anonymous Auth**.
+3.  Substitua as credenciais no arquivo `js/firebase-config.js` (ou equivalente):
 
-Clique em "Multiplayer Online". Você será levado para o Lobby de Salas.
-
-Para convidar alguém:
-
-Clique em "+ Criar Nova Sala".
-
-Uma tela de "Aguardando Oponente" será exibida.
-
-Diga para o seu amigo abrir o jogo na casa dele, clicar em "Multiplayer Online" e procurar a sua sala na lista.
-
-Para entrar na sala de alguém:
-
-Peça para o seu amigo criar a sala.
-
-A sala dele aparecerá automaticamente na sua lista (abaixo do botão de criar sala).
-
-Clique em "Entrar".
-
-Importante: Quem Cria a sala sempre joga com as Brancas. Quem Entra na sala sempre joga com as Pretas. O tabuleiro girará automaticamente para que suas peças fiquem embaixo.
-
-🕹️ Controles e Interface
-
-Como Mover as Peças
-
-A interação com o tabuleiro é feita por cliques simples (sem necessidade de arrastar):
-
-Selecionar: Clique uma vez sobre a peça que você deseja mover. O quadrado da peça ficará com um fundo levemente verde-oliva.
-
-Visualizar Movimentos: O jogo marcará com um círculo translúcido todas as casas legais para onde aquela peça pode ir.
-
-Mover: Clique em uma das casas marcadas (ou em uma peça adversária para capturá-la).
-
-Cancelar: Se mudou de ideia, clique em outra peça sua para mudar a seleção, ou clique fora.
-
-Status da Partida
-
-Logo acima do tabuleiro, há um painel branco informando:
-
-De quem é o turno ("Turno das Brancas").
-
-Se o rei está em ameaça ("Xeque!").
-
-No modo online, ele também avisa de qual cor você está jogando.
-
-Promoção de Peão
-
-Para manter o jogo ágil e funcionar bem em dispositivos móveis, a promoção de peões é automática.
-Sempre que um peão seu chegar à última fileira do tabuleiro adversário, ele se transformará automaticamente em uma Rainha (Dama).
-
-Sair da Partida
-
-A qualquer momento, você pode clicar no botão vermelho "Sair da Partida" no canto superior direito do tabuleiro.
-
-Se for modo Local/Computador, você apenas voltará ao menu.
-
-Se for modo Online, ao sair você declara abandono. Seu adversário receberá uma notificação de vitória por desistência.
-
-❓ Perguntas Frequentes
-
-O jogo funciona no celular?
-Sim! A interface é inteiramente responsiva. Em dispositivos móveis o tabuleiro se ajusta perfeitamente para cliques com o dedo em vez de mouse.
-
-Minha internet caiu durante o multiplayer. E agora?
-A sala será mantida por um breve período. No entanto, se houver desconexão total, sugerimos criar uma nova partida.
-
-Posso jogar com as pretas contra o computador?
-Nesta versão de inicialização rápida, você sempre joga de brancas contra o computador ou no modo local. Para jogar de pretas, peça para um amigo criar uma sala Multiplayer e entre nela.
-
-Boa sorte e boas partidas! ♞
+```javascript
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "seu-projeto.firebaseapp.com",
+  projectId: "seu-projeto",
+  storageBucket: "seu-projeto.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc1234"
+};
