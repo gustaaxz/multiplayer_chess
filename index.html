@@ -180,10 +180,9 @@
             myAppId = typeof __app_id !== 'undefined' ? __app_id : 'meu-xadrez-online-v1';
         } else {
             // Se o jogo for aberto pelo seu ficheiro HTML num site externo, usa as SUAS chaves.
-            // NOTA: Se o erro "api-key-not-valid" acontecer quando abrir o ficheiro externamente, 
-            // apague a apiKey abaixo e copie-a de novo diretamente do seu painel Firebase.
+            // ⚠️ ATENÇÃO: COPIE A API KEY DO FIREBASE E COLE-A AQUI DENTRO DAS ASPAS! ⚠️
             firebaseConfig = {
-                apiKey: "AIzaSyBmqOPEupWyIWEebpFGOiGH9qNQcC21EE4",
+                apiKey: "AIzaSyBmqOPEuPWyIWEebpFGOiGH9qNQcC21EE4",
                 authDomain: "xadrez-multiplayer.firebaseapp.com",
                 projectId: "xadrez-multiplayer",
                 storageBucket: "xadrez-multiplayer.firebasestorage.app",
