@@ -31,17 +31,18 @@
             .square { font-size: 3.5rem; }
         }
 
-        .light-square { background-color: #f0d9b5; }
-        .dark-square { background-color: #b58863; }
+        /* Novas Cores Premium para o Tabuleiro */
+        .light-square { background-color: #ebecd0; }
+        .dark-square { background-color: #739552; }
         
-        .highlight-selected { background-color: #a9a924 !important; }
+        .highlight-selected { background-color: rgba(255, 255, 51, 0.5) !important; }
         .highlight-move { position: relative; }
         .highlight-move::after {
             content: '';
             position: absolute;
             width: 30%;
             height: 30%;
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.15);
             border-radius: 50%;
         }
         
@@ -51,7 +52,7 @@
         }
         .piece-b {
             color: black;
-            text-shadow: 0px 2px 2px rgba(255,255,255,0.4);
+            text-shadow: 0px 2px 2px rgba(255,255,255,0.3), 0px 4px 4px rgba(0,0,0,0.4);
         }
 
         .glass-panel {
@@ -76,7 +77,7 @@
         </div>
     </nav>
 
-    <main class="flex-grow flex items-center justify-center p-4 max-w-4xl mx-auto w-full">
+    <main class="flex-grow flex items-center justify-center p-4 max-w-5xl mx-auto w-full">
         
         <!-- Loading Screen -->
         <div id="loadingView" class="text-center w-full max-w-md">
@@ -129,26 +130,58 @@
             <button onclick="cancelMatch()" class="text-red-500 hover:text-red-700 font-semibold">Cancelar Sala</button>
         </div>
 
-        <!-- Ecrã do Jogo -->
-        <div id="gameView" class="hidden w-full max-w-3xl flex flex-col items-center">
+        <!-- Ecrã do Jogo (NOVO DESIGN) -->
+        <div id="gameView" class="hidden w-full flex-col lg:flex-row gap-8 items-start justify-center">
             
-            <div class="w-full flex justify-between items-center mb-4 px-2">
-                <div id="gameStatus" class="font-semibold text-lg text-gray-800 bg-white px-4 py-2 rounded-lg shadow-sm">
+            <!-- Coluna Esquerda: Tabuleiro e Jogadores -->
+            <div class="flex flex-col w-full max-w-[500px] mx-auto lg:mx-0">
+                
+                <!-- Oponente e Peças Derrotadas por Ele -->
+                <div class="flex justify-between items-end mb-2 px-2 h-10">
+                    <div id="opponentName" class="font-bold text-gray-700 flex items-center gap-2 text-lg">
+                        👤 Oponente
+                    </div>
+                    <div id="topCaptured" class="flex flex-wrap text-2xl tracking-tighter items-center pl-2"></div>
+                </div>
+
+                <!-- O Tabuleiro -->
+                <div id="boardContainer" class="w-full aspect-square rounded-sm overflow-hidden shadow-2xl border-4 border-gray-800">
+                    <div id="board" class="w-full h-full grid grid-cols-8 grid-rows-8">
+                        <!-- Quadrados gerados via JS -->
+                    </div>
+                </div>
+
+                <!-- Você e Peças Derrotadas por Si -->
+                <div class="flex justify-between items-start mt-2 px-2 h-10">
+                    <div class="font-bold text-gray-800 flex items-center gap-2 text-lg">
+                        🧑 Você <span id="myColorIndicator" class="text-xs px-2 py-1 bg-gray-200 rounded"></span>
+                    </div>
+                    <div id="bottomCaptured" class="flex flex-wrap text-2xl tracking-tighter items-center pl-2"></div>
+                </div>
+
+                <!-- Status -->
+                <div id="gameStatus" class="mt-2 font-bold text-center text-lg text-gray-800 bg-white px-4 py-3 rounded-xl shadow border border-gray-200">
                     Status do Jogo
                 </div>
-                <button onclick="leaveGame()" class="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg font-medium transition">
-                    Sair da Partida
-                </button>
             </div>
 
-            <!-- O Tabuleiro -->
-            <div id="boardContainer" class="w-full max-w-[500px] aspect-square rounded-sm overflow-hidden shadow-2xl border-4 border-gray-800">
-                <div id="board" class="w-full h-full grid grid-cols-8 grid-rows-8">
-                    <!-- Quadrados gerados via JS -->
+            <!-- Coluna Direita: Histórico e Controles -->
+            <div class="w-full lg:w-80 flex flex-col gap-4">
+                <button onclick="leaveGame()" class="w-full bg-white hover:bg-red-50 border border-gray-200 hover:border-red-200 text-red-600 px-4 py-3 rounded-xl font-bold transition shadow-sm flex justify-center items-center gap-2">
+                    <span>🏳️</span> Abandonar Partida
+                </button>
+
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 flex flex-col overflow-hidden h-[300px] lg:h-[480px]">
+                    <div class="bg-gray-800 text-white font-bold py-3 px-4 flex justify-between items-center">
+                        <span>📋 Histórico</span>
+                    </div>
+                    <div id="moveHistory" class="flex-grow overflow-y-auto p-0 text-sm font-mono flex flex-col bg-gray-50">
+                        <!-- Histórico injetado via JS -->
+                    </div>
                 </div>
             </div>
 
-            <div id="messages" class="mt-6 text-center text-red-500 font-bold h-6"></div>
+            <div id="messages" class="hidden"></div>
         </div>
 
     </main>
@@ -174,13 +207,10 @@
         let firebaseConfig;
         let myAppId;
 
-        // Se estiver na janela de visualização (Preview), usa a configuração de ambiente para não dar erro
         if (typeof __firebase_config !== 'undefined') {
             firebaseConfig = JSON.parse(__firebase_config);
             myAppId = typeof __app_id !== 'undefined' ? __app_id : 'meu-xadrez-online-v1';
         } else {
-            // Se o jogo for aberto pelo seu ficheiro HTML num site externo, usa as SUAS chaves.
-            // ⚠️ ATENÇÃO: COPIE A API KEY DO FIREBASE E COLE-A AQUI DENTRO DAS ASPAS! ⚠️
             firebaseConfig = {
                 apiKey: "AIzaSyBmqOPEuPWyIWEebpFGOiGH9qNQcC21EE4",
                 authDomain: "xadrez-multiplayer.firebaseapp.com",
@@ -201,9 +231,6 @@
         let onlineLobbyUnsubscribe = null;
         let activeMatchUnsubscribe = null;
 
-        // ==========================================
-        // Variáveis de Estado do Jogo
-        // ==========================================
         let game = new Chess();
         let currentMode = 'local';
         let myColor = 'w';
@@ -215,12 +242,8 @@
             'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
         };
 
-        // ==========================================
-        // Inicialização e Autenticação
-        // ==========================================
         const initAuth = async () => {
             try {
-                // Tenta autenticação nativa (necessário para Preview) ou cai de volta no anónimo
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
@@ -229,23 +252,6 @@
             } catch (error) {
                 console.error("Erro de Autenticação:", error);
                 document.getElementById('userStatus').innerText = "Erro ao conectar.";
-                
-                // Mostrar o erro exato no ecrã para ajudar a resolver o problema
-                document.getElementById('loadingView').innerHTML = `
-                    <div class="bg-white p-6 rounded-xl shadow-xl border border-red-200">
-                        <div class="text-red-500 text-5xl mb-4">❌</div>
-                        <h2 class="text-xl font-bold text-gray-800 mb-2">Erro de Ligação ao Firebase</h2>
-                        <div class="bg-gray-100 p-3 rounded text-left text-sm font-mono text-red-600 overflow-x-auto mb-4">
-                            ${error.message}
-                        </div>
-                        <p class="text-sm text-gray-600 text-left">
-                            <strong>Possíveis causas:</strong><br>
-                            1. O método de Início de Sessão <b>Anónimo</b> não está ativado na secção Authentication do Firebase.<br>
-                            2. A chave da API está incorreta.<br>
-                            3. O Firebase está a bloquear a abertura de ficheiros locais (file:///). Hospede o ficheiro num site como o Tiiny.host.
-                        </p>
-                    </div>
-                `;
             }
         };
 
@@ -259,9 +265,6 @@
 
         initAuth();
 
-        // ==========================================
-        // Gerenciamento de Interface
-        // ==========================================
         function showView(viewId) {
             ['loadingView', 'menuView', 'lobbyView', 'waitingView', 'gameView'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
@@ -291,6 +294,22 @@
             const boardDiv = document.getElementById('board');
             boardDiv.innerHTML = '';
             
+            // ATUALIZAR INDICADORES DE UI (Nomes e Cores)
+            const myColorName = myColor === 'w' ? 'Brancas' : 'Pretas';
+            const myColorBg = myColor === 'w' ? 'bg-white text-gray-800 border border-gray-300' : 'bg-gray-800 text-white border border-gray-900';
+            const myColorIndicator = document.getElementById('myColorIndicator');
+            if(myColorIndicator) {
+                myColorIndicator.className = `text-xs px-2 py-1 rounded shadow-sm ml-2 ${myColorBg}`;
+                myColorIndicator.innerText = `(${myColorName})`;
+            }
+            
+            const oppNameEl = document.getElementById('opponentName');
+            if(oppNameEl) {
+                if(currentMode === 'ai') oppNameEl.innerHTML = '🤖 Computador';
+                else if(currentMode === 'local') oppNameEl.innerHTML = '🧑 Jogador 2';
+                else oppNameEl.innerHTML = '🌍 Oponente Online';
+            }
+
             const rows = myColor === 'w' ? [8,7,6,5,4,3,2,1] : [1,2,3,4,5,6,7,8];
             const cols = myColor === 'w' ? ['a','b','c','d','e','f','g','h'] : ['h','g','f','e','d','c','b','a'];
 
@@ -346,6 +365,79 @@
             }
 
             updateStatusText();
+            updateCapturedPieces();
+            updateMoveHistory();
+        }
+
+        function updateCapturedPieces() {
+            const board = game.board();
+            const initialCounts = { p: 8, n: 2, b: 2, r: 2, q: 1 };
+            const currentCounts = { w: {p:0, n:0, b:0, r:0, q:0}, b: {p:0, n:0, b:0, r:0, q:0} };
+
+            // Conta as peças que ainda estão no tabuleiro
+            for(let r=0; r<8; r++){
+                for(let c=0; c<8; c++){
+                    const p = board[r][c];
+                    if(p && p.type !== 'k') {
+                        currentCounts[p.color][p.type]++;
+                    }
+                }
+            }
+
+            const capturedByWhite = []; 
+            const capturedByBlack = []; 
+
+            // Calcula a diferença
+            for(const type in initialCounts) {
+                const missingBlack = initialCounts[type] - currentCounts.b[type];
+                for(let i=0; i<missingBlack; i++) capturedByWhite.push({type, color: 'b'});
+
+                const missingWhite = initialCounts[type] - currentCounts.w[type];
+                for(let i=0; i<missingWhite; i++) capturedByBlack.push({type, color: 'w'});
+            }
+
+            // Ordena pelo valor da peça (Rainha primeiro, depois torre, etc)
+            const pieceValues = { q: 9, r: 5, b: 3, n: 3, p: 1 };
+            capturedByWhite.sort((a,b) => pieceValues[b.type] - pieceValues[a.type]);
+            capturedByBlack.sort((a,b) => pieceValues[b.type] - pieceValues[a.type]);
+
+            const renderPieces = (pieces) => pieces.map(p => `<span class="${p.color === 'w' ? 'piece-w text-white drop-shadow-md' : 'piece-b text-black drop-shadow-md'} -ml-3 first:ml-0">${PIECES[p.type]}</span>`).join('');
+
+            // Mostra na UI consoante a cor com que estamos a jogar
+            if(myColor === 'w') {
+                document.getElementById('bottomCaptured').innerHTML = renderPieces(capturedByWhite);
+                document.getElementById('topCaptured').innerHTML = renderPieces(capturedByBlack);
+            } else {
+                document.getElementById('bottomCaptured').innerHTML = renderPieces(capturedByBlack);
+                document.getElementById('topCaptured').innerHTML = renderPieces(capturedByWhite);
+            }
+        }
+
+        function updateMoveHistory() {
+            const history = game.history(); 
+            const historyEl = document.getElementById('moveHistory');
+            if (!historyEl) return;
+            
+            historyEl.innerHTML = '';
+
+            for (let i = 0; i < history.length; i += 2) {
+                const moveNumber = Math.floor(i / 2) + 1;
+                const whiteMove = history[i];
+                const blackMove = history[i+1] ? history[i+1] : '';
+                
+                const isEvenRow = moveNumber % 2 === 0;
+                const rowBg = isEvenRow ? 'bg-gray-100' : 'bg-white';
+
+                historyEl.innerHTML += `
+                    <div class="flex px-4 py-2 border-b border-gray-200 ${rowBg} hover:bg-emerald-50 transition">
+                        <div class="w-10 text-gray-500 font-bold">${moveNumber}.</div>
+                        <div class="flex-1 text-gray-800 font-semibold">${whiteMove}</div>
+                        <div class="flex-1 text-gray-800 font-semibold">${blackMove}</div>
+                    </div>
+                `;
+            }
+            // Scroll automático para o fim
+            historyEl.scrollTop = historyEl.scrollHeight;
         }
 
         function updateStatusText() {
@@ -364,17 +456,9 @@
                 if (game.in_check()) status += ' (Xeque!)';
             }
 
-            if (currentMode === 'online') {
-                const minhaCorStr = myColor === 'w' ? 'Brancas' : 'Pretas';
-                status = `Você: ${minhaCorStr} | ${status}`;
-            }
-
             statusEl.innerText = status;
         }
 
-        // ==========================================
-        // Interação com o Tabuleiro
-        // ==========================================
         function handleSquareClick(squareId) {
             if (game.game_over()) return;
             if (currentMode === 'online' && game.turn() !== myColor) return;
@@ -420,15 +504,10 @@
             }
         }
 
-        // ==========================================
-        // Inteligência Artificial Avançada (Minimax com Alpha-Beta Pruning)
-        // ==========================================
-        
-        // Atribui um valor numérico ao estado atual do tabuleiro
+        // IA Avançada
         function evaluateBoard(gameInstance) {
             let totalEvaluation = 0;
             const board = gameInstance.board();
-            // Valores convencionais de cada peça no xadrez
             const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
             
             for (let r = 0; r < 8; r++) {
@@ -436,7 +515,6 @@
                     const piece = board[r][c];
                     if (piece) {
                         const val = pieceValues[piece.type];
-                        // As brancas somam pontos (são positivas), as pretas subtraem pontos (são negativas)
                         totalEvaluation += piece.color === 'w' ? val : -val;
                     }
                 }
@@ -444,7 +522,6 @@
             return totalEvaluation;
         }
 
-        // Algoritmo que "vê" o futuro das jogadas, procurando a melhor e prevendo as respostas do adversário
         function minimax(gameInstance, depth, alpha, beta, isMaximizingPlayer) {
             if (depth === 0 || gameInstance.game_over()) {
                 return evaluateBoard(gameInstance);
@@ -459,7 +536,7 @@
                     bestVal = Math.max(bestVal, minimax(gameInstance, depth - 1, alpha, beta, !isMaximizingPlayer));
                     gameInstance.undo();
                     alpha = Math.max(alpha, bestVal);
-                    if (beta <= alpha) break; // Alpha-Beta Pruning (ignora ramos inúteis para maior velocidade)
+                    if (beta <= alpha) break; 
                 }
                 return bestVal;
             } else {
@@ -479,20 +556,14 @@
             if (game.game_over()) return;
             
             const moves = game.moves({ verbose: true });
-            
-            // Adicionamos um toque de aleatoriedade inicial para que a IA não jogue sempre a mesma partida
             moves.sort(() => Math.random() - 0.5);
 
             let bestMove = null;
-            // O Computador joga sempre com as Pretas (portanto, ele procura a MENOR pontuação possível no tabuleiro)
             let bestValue = Infinity; 
-            
-            // Profundidade 2: O computador pensa no seu movimento e na sua provável resposta
             const depth = 2;
 
             for (let i = 0; i < moves.length; i++) {
                 game.move(moves[i]);
-                // O próximo turno é do Jogador (Brancas / Maximizador)
                 const boardValue = minimax(game, depth - 1, -Infinity, Infinity, true);
                 game.undo();
 
@@ -502,18 +573,12 @@
                 }
             }
 
-            // Jogada de segurança, caso não encontre nenhuma vantajosa
-            if (!bestMove) {
-                bestMove = moves[0];
-            }
+            if (!bestMove) bestMove = moves[0];
 
             game.move(bestMove);
             updateBoardState();
         }
 
-        // ==========================================
-        // Inicialização de Partidas (Local / AI)
-        // ==========================================
         window.startGame = (mode) => {
             currentMode = mode;
             myColor = 'w'; 
@@ -524,9 +589,6 @@
             showView('gameView');
         };
 
-        // ==========================================
-        // Lógica Multiplayer (Firebase)
-        // ==========================================
         const getMatchesCollection = () => collection(db, 'artifacts', myAppId, 'public', 'data', 'chess_matches');
 
         window.openLobby = async () => {
@@ -574,7 +636,7 @@
                     client: null,
                     status: 'waiting',
                     fen: game.fen(),
-                    pgn: game.pgn ? game.pgn() : "",
+                    pgn: typeof game.pgn === 'function' ? game.pgn() : "",
                     createdAt: Date.now()
                 });
 
@@ -599,7 +661,7 @@
                                 showView('gameView');
                             }
                             
-                            // Carrega o histórico completo se existir
+                            // Sincroniza via PGN (para manter o histórico intacto online)
                             if (data.pgn && typeof game.load_pgn === 'function' && data.pgn !== game.pgn()) {
                                 game.load_pgn(data.pgn);
                                 updateBoardState();
@@ -673,7 +735,7 @@
             try {
                 await updateDoc(matchRef, { 
                     fen: game.fen(),
-                    pgn: game.pgn ? game.pgn() : ""
+                    pgn: typeof game.pgn === 'function' ? game.pgn() : ""
                 });
             } catch (err) {
                 console.error("Erro ao sincronizar jogada", err);
