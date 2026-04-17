@@ -134,7 +134,7 @@
             user-select: none;
         }
         @media (min-width: 768px) {
-            .square { font-size: 4.5rem; }
+            .square { font-size: 3.5rem; } /* Tamanho reduzido para caber no zoom de 100% sem scroll */
         }
 
         /* Cores Verde/Bege do Chess.com Premium */
@@ -164,8 +164,8 @@
         }
 
         /* Efeitos de Movimento e Destaque Clássico */
-        .highlight-selected { background-color: rgba(255, 255, 51, 0.5) !important; }
-        .highlight-last-move { background-color: rgba(255, 255, 51, 0.5) !important; }
+        .highlight-selected { background-color: rgba(255, 255, 0, 0.5) !important; }
+        .highlight-last-move { background-color: rgba(255, 255, 0, 0.5) !important; }
         .highlight-move { position: relative; }
         
         /* Ponto circular para movimentos possíveis (estilo chess.com) */
@@ -355,7 +355,7 @@
         </div>
 
         <!-- Ecrã do Jogo (NOVO DESIGN CHESS.COM) -->
-        <div id="gameView" class="hidden w-full flex-col gap-3 items-center justify-center max-w-[650px] mx-auto animate-enter mt-4">
+        <div id="gameView" class="hidden w-full flex-col gap-2 items-center justify-center max-w-[520px] mx-auto animate-enter mt-2">
             
             <!-- Tabuleiro e Jogadores -->
             <div class="flex flex-col w-full">
@@ -727,43 +727,91 @@
             if (currentMode === 'online') {
                 syncMoveToFirebase();
             } else if (currentMode === 'ai' && !game.game_over()) {
-                setTimeout(makeAIMove, 500);
+                // Mensagem para dar a sensação que a IA está a "pensar" na armadilha
+                document.getElementById('gameStatus').innerText = "O Computador está a pensar...";
+                setTimeout(makeAIMove, 200);
             }
         }
 
-        // IA Avançada
-        function evaluateBoard(gameInstance) {
+        // ==========================================
+        // Inteligência Artificial (Minimax + Alpha-Beta Pruning + Visão Depth 3)
+        // ==========================================
+        
+        function evaluateBoard(gameInstance, depth) {
+            // OBJETIVO 1: Matar o Rei (Xeque-mate dá pontuação massiva)
+            if (gameInstance.in_checkmate()) {
+                // Se as Brancas recebem xeque-mate, as Pretas (IA) ganham (-10000).
+                // Adicionamos 'depth' para que a IA prefira o xeque-mate mais rápido possível.
+                return gameInstance.turn() === 'w' ? -10000 - depth : 10000 + depth;
+            }
+            if (gameInstance.in_draw() || gameInstance.in_stalemate() || gameInstance.in_threefold_repetition()) {
+                return 0; // Empate não interessa a nenhum dos dois
+            }
+
             let totalEvaluation = 0;
             const board = gameInstance.board();
+            // OBJETIVO 2: Matar e defender peças valiosas
             const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
             
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     const piece = board[r][c];
                     if (piece) {
-                        const val = pieceValues[piece.type];
+                        let val = pieceValues[piece.type];
+                        
+                        // Bónus Posicional: A IA ataca pelo centro e recua o próprio Rei
+                        const centerDist = Math.abs(3.5 - r) + Math.abs(3.5 - c);
+                        if (piece.type !== 'k') {
+                            val += (7 - centerDist) * 0.5; // Peças normais avançam para o centro
+                        } else {
+                            val -= (7 - centerDist) * 0.5; // O Rei foge do centro para se defender
+                        }
+
                         totalEvaluation += piece.color === 'w' ? val : -val;
                     }
                 }
             }
+
+            // OBJETIVO 3: Agressividade. Bónus extra por colocar o jogador em Xeque
+            if (gameInstance.in_check()) {
+                totalEvaluation += gameInstance.turn() === 'w' ? -15 : 15;
+            }
+
             return totalEvaluation;
+        }
+
+        // Ordena os movimentos mentalmente para a IA calcular muito mais rápido
+        function orderMoves(moves) {
+            return moves.sort((a, b) => {
+                let scoreA = a.flags.includes('c') ? 10 : 0; // Capturas têm prioridade no cálculo
+                if (a.san.includes('+')) scoreA += 5;        // Xeques têm prioridade
+                if (a.san.includes('#')) scoreA += 100;      // Xeque-mates têm super prioridade
+                
+                let scoreB = b.flags.includes('c') ? 10 : 0;
+                if (b.san.includes('+')) scoreB += 5;
+                if (b.san.includes('#')) scoreB += 100;
+                
+                // Um toque de aleatoriedade para a IA não abrir o jogo sempre da mesma forma
+                return (scoreB - scoreA) + (Math.random() - 0.5);
+            });
         }
 
         function minimax(gameInstance, depth, alpha, beta, isMaximizingPlayer) {
             if (depth === 0 || gameInstance.game_over()) {
-                return evaluateBoard(gameInstance);
+                return evaluateBoard(gameInstance, depth);
             }
 
-            const moves = gameInstance.moves();
+            let moves = gameInstance.moves({ verbose: true });
+            moves = orderMoves(moves);
 
             if (isMaximizingPlayer) {
                 let bestVal = -Infinity;
                 for (let i = 0; i < moves.length; i++) {
                     gameInstance.move(moves[i]);
                     bestVal = Math.max(bestVal, minimax(gameInstance, depth - 1, alpha, beta, !isMaximizingPlayer));
-                    gameInstance.undo();
+                    gameInstance.undo(); // Desfaz a simulação para tentar o próximo
                     alpha = Math.max(alpha, bestVal);
-                    if (beta <= alpha) break; 
+                    if (beta <= alpha) break; // Alpha-Beta Pruning (ignora caminhos ruins)
                 }
                 return bestVal;
             } else {
@@ -782,12 +830,15 @@
         function makeAIMove() {
             if (game.game_over()) return;
             
-            const moves = game.moves({ verbose: true });
-            moves.sort(() => Math.random() - 0.5);
+            let moves = game.moves({ verbose: true });
+            moves = orderMoves(moves);
 
             let bestMove = null;
-            let bestValue = Infinity; 
-            const depth = 2;
+            let bestValue = Infinity; // O Computador joga de Pretas (procura pontuação negativa)
+            
+            // VISÃO DE FUTURO: Aumentada de 2 para 3!
+            // A IA antevê o movimento dela -> O seu Contra-Ataque -> E o próximo golpe dela!
+            const depth = 3; 
 
             for (let i = 0; i < moves.length; i++) {
                 game.move(moves[i]);
